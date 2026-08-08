@@ -44,7 +44,6 @@
                     <div class="relative">
                         <input type="password" id="login-password" placeholder="أدخل كلمة السر" required class="w-full p-3 pr-10 pl-10 rounded-xl border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-gray-900 dark:text-white text-sm">
                         <i class="fa-solid fa-lock absolute top-3.5 right-3 text-gray-400"></i>
-                        <!-- زر العين لإظهار/إخفاء كلمة المرور -->
                         <button type="button" onclick="togglePasswordVisibility()" class="absolute top-3.5 left-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus:outline-none">
                             <i id="toggle-password-icon" class="fa-solid fa-eye"></i>
                         </button>
@@ -101,6 +100,14 @@
                 <button onclick="switchTab('invoices')" id="nav-invoices" class="sidebar-item w-full flex items-center px-6 py-3 text-sm font-semibold">
                     <i class="fa-solid fa-file-invoice-dollar w-6 text-lg"></i>
                     <span>الفواتير والأرباح</span>
+                </button>
+                <!-- خانة المرتجعات الجديدة -->
+                <button onclick="switchTab('returns')" id="nav-returns" class="sidebar-item w-full flex items-center justify-between px-6 py-3 text-sm font-semibold">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-rotate-left w-6 text-lg text-amber-400"></i>
+                        <span>المرتجعات</span>
+                    </div>
+                    <span id="returns-badge" class="bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">0</span>
                 </button>
                 <button onclick="switchTab('inventory-sheet')" id="nav-inventory-sheet" class="sidebar-item w-full flex items-center px-6 py-3 text-sm font-semibold">
                     <i class="fa-solid fa-clipboard-check w-6 text-lg text-emerald-400"></i>
@@ -349,6 +356,25 @@
             </div>
         </section>
 
+        <!-- قسم خانة المرتجعات الجديد -->
+        <section id="tab-returns" class="hidden p-4 sm:p-6 space-y-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">إدارة المرتجعات والفواتير الملغاة</h2>
+                    <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">اختر الفاتورة المرتجعة لمعالجة أصنافها (سليم ليعود للمخزون أو تالف)</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                <div class="p-4 border-b border-gray-100 dark:border-gray-700">
+                    <input type="text" id="returns-search" oninput="renderReturnsList()" placeholder="بحث في المرتجعات برقم الفاتورة أو اسم العميل..." class="w-full p-2.5 border dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-900 dark:text-white">
+                </div>
+                <div id="returns-list-container" class="divide-y divide-gray-100 dark:divide-gray-700">
+                    <p class="text-gray-400 text-sm text-center py-12">لا توجد فواتير مرتجعة مسجلة</p>
+                </div>
+            </div>
+        </section>
+
         <!-- قسم خانة الجرد لشهر يوليو -->
         <section id="tab-inventory-sheet" class="hidden p-4 sm:p-6 space-y-6">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -492,7 +518,7 @@
             <div class="flex justify-between items-center">
                 <div>
                     <h2 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">سجل الفواتير والمبيعات</h2>
-                    <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">إدارة الفواتير — تعديل السعر واسم المشتري، أو حذف الفواتير مع استرداد المخزون تلقائياً</p>
+                    <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">إدارة الفواتير — تعديل السعر واسم المشتري، أو حذف الفواتير ونقلها للمرتجعات</p>
                 </div>
             </div>
 
@@ -609,16 +635,32 @@
         </div>
     </div>
 
+    <!-- نافذة تأكيد الحذف من الفواتير ونقلها للمرتجعات -->
     <div id="delete-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
         <div class="bg-white dark:bg-gray-800 dark:text-white rounded-2xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl">
-            <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto text-xl">
-                <i class="fa-solid fa-trash-can"></i>
+            <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto text-xl">
+                <i class="fa-solid fa-rotate-left"></i>
             </div>
-            <h3 class="font-bold text-gray-800 dark:text-white text-lg">حذف الفاتورة وإعادة المخزون</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-300">هل أنت متأكد من حذف الفاتورة <span id="delete-inv-id" class="font-bold text-gray-800 dark:text-white"></span>؟ سيتم **إعادة الأصناف المباعة بها إلى المخزون** تلقائياً.</p>
+            <h3 class="font-bold text-gray-800 dark:text-white text-lg">نقل الفاتورة إلى المرتجعات</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-300">هل أنت متأكد من نقل الفاتورة <span id="delete-inv-id" class="font-bold text-gray-800 dark:text-white"></span> إلى خانة المرتجعات؟</p>
             <div class="flex gap-2 pt-2">
-                <button id="confirm-delete-btn" class="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-sm">تأكيد الحذف والإعادة</button>
+                <button id="confirm-delete-btn" class="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-sm">تأكيد ونقل للمرتجعات</button>
                 <button onclick="closeDeleteModal()" class="flex-1 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 font-semibold rounded-xl text-sm">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة استعراض فاتورة مرتجعة ومعالجة أصنافها (سليم / تالف) -->
+    <div id="return-details-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 dark:text-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b dark:border-gray-700 pb-3">
+                <h3 class="font-bold text-gray-800 dark:text-white text-lg">معالجة مرتجع فاتورة <span id="return-modal-id" class="text-amber-500"></span></h3>
+                <button onclick="closeReturnDetailsModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400">حدد حالة كل صنف في هذه الفاتورة المرتجعة (سليم ليعود للمخزون أو تالف ليتم استبعاده):</p>
+            <div id="return-items-list" class="space-y-3 divide-y divide-gray-100 dark:divide-gray-700"></div>
+            <div class="pt-3 border-t dark:border-gray-700 flex justify-end">
+                <button onclick="closeReturnDetailsModal()" class="px-5 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold rounded-xl text-sm">إغلاق</button>
             </div>
         </div>
     </div>
@@ -677,7 +719,6 @@
             backdrop.classList.toggle('hidden');
         }
 
-        // دالة إظهار وإخفاء كلمة المرور بزر العين
         function togglePasswordVisibility() {
             const passwordInput = document.getElementById('login-password');
             const icon = document.getElementById('toggle-password-icon');
@@ -728,6 +769,7 @@
             renderAiForecastTable();
             renderProductsTable();
             renderInvoicesList();
+            renderReturnsList();
             renderOrdersList();
         });
 
@@ -798,6 +840,7 @@
         let inventorySheet = [];
         let cart = [];
         let invoices = [];
+        let returnsList = []; // مصفوفة المرتجعات الجديدة
         let orders = []; 
         let selectedProductToDelete = null;
         let selectedInvoiceToDelete = null;
@@ -876,6 +919,14 @@
                 saveInvoicesToStorage();
             }
 
+            const savedReturns = localStorage.getItem('nour_erp_returns');
+            if (savedReturns) {
+                returnsList = JSON.parse(savedReturns);
+            } else {
+                returnsList = [];
+                saveReturnsToStorage();
+            }
+
             const savedOrders = localStorage.getItem('nour_erp_orders');
             if (savedOrders) {
                 orders = JSON.parse(savedOrders);
@@ -952,6 +1003,21 @@
             localStorage.setItem('nour_erp_invoices', JSON.stringify(invoices));
         }
 
+        function saveReturnsToStorage() {
+            localStorage.setItem('nour_erp_returns', JSON.stringify(returnsList));
+            updateReturnsBadge();
+        }
+
+        function updateReturnsBadge() {
+            const badge = document.getElementById('returns-badge');
+            badge.innerText = returnsList.length;
+            if (returnsList.length === 0) {
+                badge.classList.add('hidden');
+            } else {
+                badge.classList.remove('hidden');
+            }
+        }
+
         function saveOrdersToStorage() {
             localStorage.setItem('nour_erp_orders', JSON.stringify(orders));
             updateOrdersBadge();
@@ -974,7 +1040,7 @@
         }
 
         function switchTab(tabId) {
-            ['dashboard', 'pos', 'inventory', 'inventory-sheet', 'ai-forecast', 'products', 'invoices', 'orders'].forEach(t => {
+            ['dashboard', 'pos', 'inventory', 'returns', 'inventory-sheet', 'ai-forecast', 'products', 'invoices', 'orders'].forEach(t => {
                 document.getElementById(`tab-${t}`).classList.add('hidden');
                 document.getElementById(`nav-${t}`).classList.remove('active');
             });
@@ -994,6 +1060,7 @@
             if (tabId === 'dashboard') renderDashboard();
             if (tabId === 'pos') renderPosSearchResults();
             if (tabId === 'inventory') renderInventoryTable();
+            if (tabId === 'returns') renderReturnsList();
             if (tabId === 'inventory-sheet') renderInventorySheetTable();
             if (tabId === 'ai-forecast') renderAiForecastTable();
             if (tabId === 'products') renderProductsTable();
@@ -1080,6 +1147,113 @@
                     </div>
                 `).join('');
             }
+        }
+
+        // عرض خانة المرتجعات
+        function renderReturnsList() {
+            const query = document.getElementById('returns-search').value.trim().toLowerCase();
+            const container = document.getElementById('returns-list-container');
+
+            const filtered = returnsList.filter(i => 
+                i.id.toLowerCase().includes(query) ||
+                (i.buyerName && i.buyerName.toLowerCase().includes(query))
+            ).reverse();
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-sm text-center py-12">لا توجد فواتير مرتجعة مسجلة</p>';
+                return;
+            }
+
+            container.innerHTML = filtered.map(inv => `
+                <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-900 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-black text-amber-600">مرتجع فاتورة #${inv.id}</span>
+                            <span class="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded font-semibold">${inv.paymentMethod}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">العميل: <span class="font-bold text-gray-700 dark:text-gray-200">${inv.buyerName}</span></p>
+                        <p class="text-xs text-gray-400 mt-0.5">${new Date(inv.date).toLocaleString('ar-EG')}</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="text-left">
+                            <p class="text-sm font-black text-gray-800 dark:text-white">${inv.finalTotal.toFixed(2)} ج.م</p>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="openReturnDetailsModal('${inv.id}')" class="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold shadow flex items-center gap-1">
+                                <i class="fa-solid fa-list-check"></i> معاينة المعالجة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openReturnDetailsModal(invId) {
+            const inv = returnsList.find(i => i.id === invId);
+            if (!inv) return;
+
+            document.getElementById('return-modal-id').innerText = '#' + inv.id;
+            const listContainer = document.getElementById('return-items-list');
+
+            listContainer.innerHTML = inv.items.map((item, idx) => `
+                <div py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-3">
+                    <div>
+                        <p class="font-bold text-gray-800 dark:text-white text-xs">${item.name}</p>
+                        <p class="text-gray-400 text-xs">الكمية المباعة: ${item.quantity} | السعر: ${item.price} ج.م</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="processReturnItem('${inv.id}', ${idx}, 'salam')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow">
+                            <i class="fa-solid fa-check"></i> سليم (يرجع للأصناف)
+                        </button>
+                        <button onclick="processReturnItem('${inv.id}', ${idx}, 'talef')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow">
+                            <i class="fa-solid fa-xmark"></i> تالف فقط (بدون إضافة للأصناف)
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('return-details-modal').classList.remove('hidden');
+        }
+
+        function closeReturnDetailsModal() {
+            document.getElementById('return-details-modal').classList.add('hidden');
+        }
+
+        // معالجة الصنف (سليم يرجع للمخزون والأصناف، أو تالف لا يضاف)
+        function processReturnItem(invId, itemIndex, type) {
+            const inv = returnsList.find(i => i.id === invId);
+            if (!inv || !inv.items[itemIndex]) return;
+
+            const item = inv.items[itemIndex];
+            if (item.processed) {
+                showToast('تمت معالجة هذا الصنف مسبقاً!', 'error');
+                return;
+            }
+
+            if (type === 'salam') {
+                const prod = products.find(p => p.id === item.id);
+                if (prod) {
+                    prod.stock += item.quantity;
+                    saveProductsToStorage();
+                    products.forEach(p => {
+                        const sheetItem = inventorySheet.find(si => si.code === p.code);
+                        if (sheetItem) sheetItem.sysStock = p.stock;
+                    });
+                    saveInventorySheetToStorage();
+                    showToast(`تم إرجاع الصنف (${item.name}) إلى المخزون والأصناف بنجاح!`, 'success');
+                } else {
+                    showToast('الصنف غير موجود في قائمة الأصناف حالياً', 'error');
+                }
+            } else {
+                showToast(`تم تصنيف الصنف (${item.name}) كـ تالف ولن يتم إضافته للأصناف.`, 'info');
+            }
+
+            item.processed = true;
+            saveReturnsToStorage();
+            openReturnDetailsModal(invId);
+            renderInventoryTable();
+            renderProductsTable();
+            renderInventorySheetTable();
         }
 
         function renderInventorySheetTable() {
@@ -1718,7 +1892,7 @@
                         <div class="flex gap-1">
                             <button onclick='openPrintModal(${JSON.stringify(inv)})' class="p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 rounded-lg text-xs" title="طباعة أو استعراض"><i class="fa-solid fa-print"></i></button>
                             <button onclick="openEditInvoiceModal('${inv.id}')" class="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs" title="تعديل بيانات الفاتورة"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="openDeleteModal('${inv.id}')" class="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs" title="حذف الفاتورة وإعادة المخزون"><i class="fa-solid fa-trash"></i></button>
+                            <button onclick="openDeleteModal('${inv.id}')" class="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs" title="نقل الفاتورة إلى المرتجعات"><i class="fa-solid fa-rotate-left"></i></button>
                         </div>
                     </div>
                 </div>
@@ -1814,6 +1988,7 @@
             }
         }
 
+        // نقل الفاتورة من الفواتير إلى المرتجعات عند الضغط على الحذف
         function openDeleteModal(invId) {
             const inv = invoices.find(i => i.id === invId);
             if (!inv) return;
@@ -1822,33 +1997,18 @@
             document.getElementById('delete-modal').classList.remove('hidden');
 
             document.getElementById('confirm-delete-btn').onclick = function() {
-                inv.items.forEach(item => {
-                    const prod = products.find(p => p.id === item.id);
-                    if (prod) {
-                        prod.stock += item.quantity;
-                    }
-                });
-
-                products.forEach(p => {
-                    const sheetItem = inventorySheet.find(si => si.code === p.code);
-                    if (sheetItem) sheetItem.sysStock = p.stock;
-                });
-
-                saveProductsToStorage();
-                saveInventorySheetToStorage();
-
+                // إزالة الفاتورة من قائمة المبيعات ونقلها لقائمة المرتجعات
                 invoices = invoices.filter(i => i.id !== inv.id);
                 saveInvoicesToStorage();
 
+                returnsList.push(inv);
+                saveReturnsToStorage();
+
                 closeDeleteModal();
                 renderInvoicesList();
+                renderReturnsList();
                 renderDashboard();
-                renderInventoryTable();
-                renderInventorySheetTable();
-                renderAiForecastTable();
-                renderProductsTable();
-                renderPosSearchResults();
-                showToast('تم حذف الفاتورة واسترداد المخزون بنجاح', 'success');
+                showToast('تم نقل الفاتورة إلى خانة المرتجعات بنجاح', 'success');
             }
         }
 
