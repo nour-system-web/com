@@ -101,7 +101,7 @@
                     <i class="fa-solid fa-file-invoice-dollar w-6 text-lg"></i>
                     <span>الفواتير والأرباح</span>
                 </button>
-                <!-- خانة المرتجعات الجديدة -->
+                <!-- خانة المرتجعات -->
                 <button onclick="switchTab('returns')" id="nav-returns" class="sidebar-item w-full flex items-center justify-between px-6 py-3 text-sm font-semibold">
                     <div class="flex items-center gap-3">
                         <i class="fa-solid fa-rotate-left w-6 text-lg text-amber-400"></i>
@@ -356,12 +356,26 @@
             </div>
         </section>
 
-        <!-- قسم خانة المرتجعات الجديد -->
+        <!-- قسم خانة المرتجعات المحدث -->
         <section id="tab-returns" class="hidden p-4 sm:p-6 space-y-6">
             <div class="flex justify-between items-center">
                 <div>
                     <h2 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">إدارة المرتجعات والفواتير الملغاة</h2>
                     <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">اختر الفاتورة المرتجعة لمعالجة أصنافها (سليم ليعود للمخزون أو تالف)</p>
+                </div>
+            </div>
+
+            <!-- قسم الأصناف التالفة خلال هذا الشهر (في الأعلى على الشمال/اليمين بالتصميم المتناسق) -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-rose-200 dark:border-rose-900/50 p-4 space-y-3">
+                <div class="flex justify-between items-center border-b pb-2 dark:border-gray-700">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation text-rose-500"></i>
+                        <h3 class="font-bold text-gray-800 dark:text-white text-sm">الأصناف التالفة خلال هذا الشهر</h3>
+                    </div>
+                    <span id="damaged-count-badge" class="bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 px-2.5 py-0.5 rounded-full text-xs font-bold">0 صنف تالف</span>
+                </div>
+                <div id="damaged-items-container" class="space-y-2 max-h-48 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+                    <p class="text-gray-400 text-xs text-center py-4">لا توجد أصناف تالفة مسجلة خلال هذا الشهر</p>
                 </div>
             </div>
 
@@ -635,7 +649,7 @@
         </div>
     </div>
 
-    <!-- نافذة تأكيد الحذف من الفواتير ونقلها للمرتجعات -->
+    <!-- نافذة تأكيد النقل للمرتجعات -->
     <div id="delete-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
         <div class="bg-white dark:bg-gray-800 dark:text-white rounded-2xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl">
             <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto text-xl">
@@ -657,7 +671,7 @@
                 <h3 class="font-bold text-gray-800 dark:text-white text-lg">معالجة مرتجع فاتورة <span id="return-modal-id" class="text-amber-500"></span></h3>
                 <button onclick="closeReturnDetailsModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
-            <p class="text-xs text-gray-500 dark:text-gray-400">حدد حالة كل صنف في هذه الفاتورة المرتجعة (سليم ليعود للمخزون أو تالف ليتم استبعاده):</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">حدد حالة كل صنف في هذه الفاتورة المرتجعة (سليم ليعود للمخزون أو تالف ليختفي ويضاف لقائمة التالف الشهري):</p>
             <div id="return-items-list" class="space-y-3 divide-y divide-gray-100 dark:divide-gray-700"></div>
             <div class="pt-3 border-t dark:border-gray-700 flex justify-end">
                 <button onclick="closeReturnDetailsModal()" class="px-5 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold rounded-xl text-sm">إغلاق</button>
@@ -840,7 +854,8 @@
         let inventorySheet = [];
         let cart = [];
         let invoices = [];
-        let returnsList = []; // مصفوفة المرتجعات الجديدة
+        let returnsList = []; 
+        let damagedMonthlyItems = []; // قائمة الأصناف التالفة خلال هذا الشهر
         let orders = []; 
         let selectedProductToDelete = null;
         let selectedInvoiceToDelete = null;
@@ -927,6 +942,14 @@
                 saveReturnsToStorage();
             }
 
+            const savedDamaged = localStorage.getItem('nour_erp_damaged_monthly');
+            if (savedDamaged) {
+                damagedMonthlyItems = JSON.parse(savedDamaged);
+            } else {
+                damagedMonthlyItems = [];
+                saveDamagedToStorage();
+            }
+
             const savedOrders = localStorage.getItem('nour_erp_orders');
             if (savedOrders) {
                 orders = JSON.parse(savedOrders);
@@ -1008,6 +1031,10 @@
             updateReturnsBadge();
         }
 
+        function saveDamagedToStorage() {
+            localStorage.setItem('nour_erp_damaged_monthly', JSON.stringify(damagedMonthlyItems));
+        }
+
         function updateReturnsBadge() {
             const badge = document.getElementById('returns-badge');
             badge.innerText = returnsList.length;
@@ -1060,7 +1087,10 @@
             if (tabId === 'dashboard') renderDashboard();
             if (tabId === 'pos') renderPosSearchResults();
             if (tabId === 'inventory') renderInventoryTable();
-            if (tabId === 'returns') renderReturnsList();
+            if (tabId === 'returns') {
+                renderReturnsList();
+                renderDamagedMonthlyList();
+            }
             if (tabId === 'inventory-sheet') renderInventorySheetTable();
             if (tabId === 'ai-forecast') renderAiForecastTable();
             if (tabId === 'products') renderProductsTable();
@@ -1149,7 +1179,7 @@
             }
         }
 
-        // عرض خانة المرتجعات
+        // عرض خانة المرتجعات والأصناف التالفة للشهر
         function renderReturnsList() {
             const query = document.getElementById('returns-search').value.trim().toLowerCase();
             const container = document.getElementById('returns-list-container');
@@ -1188,6 +1218,40 @@
             `).join('');
         }
 
+        // عرض الأصناف التالفة خلال هذا الشهر في الأعلى
+        function renderDamagedMonthlyList() {
+            const container = document.getElementById('damaged-items-container');
+            const badge = document.getElementById('damaged-count-badge');
+
+            badge.innerText = `${damagedMonthlyItems.length} صنف تالف`;
+
+            if (damagedMonthlyItems.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-xs text-center py-4">لا توجد أصناف تالفة مسجلة خلال هذا الشهر</p>';
+                return;
+            }
+
+            container.innerHTML = damagedMonthlyItems.map((item, idx) => `
+                <div class="py-2 flex justify-between items-center text-xs">
+                    <div>
+                        <span class="font-bold text-gray-800 dark:text-white">${item.name}</span>
+                        <span class="text-gray-400 mr-2">(${item.category})</span>
+                        <p class="text-[10px] text-gray-400 mt-0.5">من فاتورة #${item.invoiceId} — ${new Date(item.date).toLocaleDateString('ar-EG')}</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="px-2 py-0.5 bg-rose-100 text-rose-700 font-bold rounded">الكمية: ${item.quantity}</span>
+                        <button onclick="removeDamagedItem(${idx})" class="text-gray-400 hover:text-rose-600 text-xs" title="حذف من القائمة"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function removeDamagedItem(index) {
+            damagedMonthlyItems.splice(index, 1);
+            saveDamagedToStorage();
+            renderDamagedMonthlyList();
+            showToast('تمت إزالة الصنف من قائمة التالف الشهري', 'info');
+        }
+
         function openReturnDetailsModal(invId) {
             const inv = returnsList.find(i => i.id === invId);
             if (!inv) return;
@@ -1195,22 +1259,31 @@
             document.getElementById('return-modal-id').innerText = '#' + inv.id;
             const listContainer = document.getElementById('return-items-list');
 
-            listContainer.innerHTML = inv.items.map((item, idx) => `
-                <div py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-3">
-                    <div>
-                        <p class="font-bold text-gray-800 dark:text-white text-xs">${item.name}</p>
-                        <p class="text-gray-400 text-xs">الكمية المباعة: ${item.quantity} | السعر: ${item.price} ج.م</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="processReturnItem('${inv.id}', ${idx}, 'salam')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow">
-                            <i class="fa-solid fa-check"></i> سليم (يرجع للأصناف)
-                        </button>
-                        <button onclick="processReturnItem('${inv.id}', ${idx}, 'talef')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow">
-                            <i class="fa-solid fa-xmark"></i> تالف فقط (بدون إضافة للأصناف)
-                        </button>
-                    </div>
-                </div>
-            `).join('');
+            const unprocessedItems = inv.items.filter(item => !item.processed);
+
+            if (unprocessedItems.length === 0) {
+                listContainer.innerHTML = '<p class="text-gray-400 text-xs text-center py-6">تمت معالجة جميع أصناف هذه الفاتورة مسبقاً</p>';
+            } else {
+                listContainer.innerHTML = inv.items.map((item, idx) => {
+                    if (item.processed) return '';
+                    return `
+                        <div class="py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-3 border-b dark:border-gray-700">
+                            <div>
+                                <p class="font-bold text-gray-800 dark:text-white text-xs">${item.name}</p>
+                                <p class="text-gray-400 text-xs">الكمية المباعة: ${item.quantity} | السعر: ${item.price} ج.م</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="processReturnItem('${inv.id}', ${idx}, 'salam')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow">
+                                    <i class="fa-solid fa-check"></i> سليم (يرجع للأصناف)
+                                </button>
+                                <button onclick="processReturnItem('${inv.id}', ${idx}, 'talef')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow">
+                                    <i class="fa-solid fa-xmark"></i> تالف (يختفي ويضاف للتالف الشهري)
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
 
             document.getElementById('return-details-modal').classList.remove('hidden');
         }
@@ -1219,7 +1292,7 @@
             document.getElementById('return-details-modal').classList.add('hidden');
         }
 
-        // معالجة الصنف (سليم يرجع للمخزون والأصناف، أو تالف لا يضاف)
+        // معالجة الصنف (سليم يرجع للمخزون، أو تالف يختفي من المرتجعات ويظهر فوق في الأصناف التالفة للشهر)
         function processReturnItem(invId, itemIndex, type) {
             const inv = returnsList.find(i => i.id === invId);
             if (!inv || !inv.items[itemIndex]) return;
@@ -1245,12 +1318,33 @@
                     showToast('الصنف غير موجود في قائمة الأصناف حالياً', 'error');
                 }
             } else {
-                showToast(`تم تصنيف الصنف (${item.name}) كـ تالف ولن يتم إضافته للأصناف.`, 'info');
+                // إضافة الصنف إلى قائمة الأصناف التالفة خلال هذا الشهر
+                damagedMonthlyItems.push({
+                    invoiceId: inv.id,
+                    name: item.name,
+                    category: item.category || 'عام',
+                    quantity: item.quantity,
+                    date: new Date().toISOString()
+                });
+                saveDamagedToStorage();
+                showToast(`تم تصنيف الصنف (${item.name}) كـ تالف وإضافته لقائمة التالف الشهري بالأعلى.`, 'info');
             }
 
             item.processed = true;
+
+            // إذا تمت معالجة جميع أصناف الفاتورة، يتم إزالتها بالكامل من خانة المرتجعات
+            const allProcessed = inv.items.every(it => it.processed);
+            if (allProcessed) {
+                returnsList = returnsList.filter(i => i.id !== invId);
+                closeReturnDetailsModal();
+                showToast('تمت معالجة وإزالة الفاتورة بالكامل من المرتجعات', 'success');
+            } else {
+                openReturnDetailsModal(invId);
+            }
+
             saveReturnsToStorage();
-            openReturnDetailsModal(invId);
+            renderReturnsList();
+            renderDamagedMonthlyList();
             renderInventoryTable();
             renderProductsTable();
             renderInventorySheetTable();
@@ -1831,7 +1925,7 @@
             document.getElementById('delete-product-modal').classList.remove('hidden');
 
             document.getElementById('confirm-delete-prod-btn').onclick = function() {
-                products = products.filter(p => p.id === prod.id);
+                products = products.filter(p => p.id !== prod.id);
                 inventorySheet = inventorySheet.filter(si => si.code !== prod.code);
                 saveProductsToStorage();
                 saveInventorySheetToStorage();
@@ -1988,7 +2082,6 @@
             }
         }
 
-        // نقل الفاتورة من الفواتير إلى المرتجعات عند الضغط على الحذف
         function openDeleteModal(invId) {
             const inv = invoices.find(i => i.id === invId);
             if (!inv) return;
@@ -1997,7 +2090,6 @@
             document.getElementById('delete-modal').classList.remove('hidden');
 
             document.getElementById('confirm-delete-btn').onclick = function() {
-                // إزالة الفاتورة من قائمة المبيعات ونقلها لقائمة المرتجعات
                 invoices = invoices.filter(i => i.id !== inv.id);
                 saveInvoicesToStorage();
 
