@@ -1179,7 +1179,14 @@
             }
         }
 
-        // عرض خانة المرتجعات والأصناف التالفة للشهر
+       // عرض خانة المرتجعات والأصناف التالفة للشهر
+        function removeReturnInvoice(invId) {
+            returnsList = returnsList.filter(i => i.id !== invId);
+            saveReturnsToStorage();
+            renderReturnsList();
+            showToast('تمت إزالة الفاتورة من المرتجعات بنجاح', 'success');
+        }
+
         function renderReturnsList() {
             const query = document.getElementById('returns-search').value.trim().toLowerCase();
             const container = document.getElementById('returns-list-container');
@@ -1212,7 +1219,14 @@
                             <button onclick="openReturnDetailsModal('${inv.id}')" class="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold shadow flex items-center gap-1">
                                 <i class="fa-solid fa-list-check"></i> معاينة المعالجة
                             </button>
+                            <button onclick="removeReturnInvoice('${inv.id}')" class="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold shadow flex items-center gap-1" title="حذف نهائي">
+                                <i class="fa-solid fa-trash"></i> حذف
+                            </button>
                         </div>
+                    </div>
+                </div>
+            `).join('');
+        }
                     </div>
                 </div>
             `).join('');
