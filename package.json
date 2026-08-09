@@ -6,7 +6,7 @@
   "author": "Nour Group",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win"
+      "build": "electron-builder --win --publish never"
   },
   "devDependencies": {
     "electron": "^37.2.6",
